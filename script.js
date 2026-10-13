@@ -1,4 +1,3 @@
-// --- Konfiguracja i Stan Gry ---
 const boardElement = document.getElementById('chessboard');
 const statusElement = document.getElementById('game-status');
 const startBtn = document.getElementById('start-btn');
@@ -9,7 +8,6 @@ let selectedSquare = null;
 let currentPlayer = 'w';
 let gameActive = false;
 
-// Reprezentacja figur (Unicode)
 const pieces = {
     'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
     'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'
@@ -26,7 +24,6 @@ const initialBoard = [
     ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
 ];
 
-// --- Inicjalizacja i Rysowanie Planszy ---
 function initGame() {
     board = JSON.parse(JSON.stringify(initialBoard));
     currentPlayer = 'w';
@@ -43,21 +40,12 @@ function drawBoard() {
         for (let col = 0; col < 8; col++) {
             const square = document.createElement('div');
             square.classList.add('square');
-            
-            // Szachownica: naprzemienne kolory
-            if ((row + col) % 2 === 0) {
-                square.classList.add('light');
-            } else {
-                square.classList.add('dark');
-            }
-            
+            square.classList.add((row + col) % 2 === 0 ? 'light' : 'dark');
             square.dataset.row = row;
             square.dataset.col = col;
 
             const piece = board[row][col];
-            if (piece) {
-                square.innerText = pieces[piece];
-            }
+            if (piece) square.innerText = pieces[piece];
 
             square.addEventListener('click', () => handleSquareClick(row, col));
             boardElement.appendChild(square);
@@ -65,20 +53,17 @@ function drawBoard() {
     }
 }
 
-// --- Logika Ruchu i Obsługa Gracza ---
 function handleSquareClick(row, col) {
     if (!gameActive || currentPlayer !== 'w') return;
 
     const piece = board[row][col];
 
-    // Wybór figury
     if (selectedSquare === null) {
         if (piece && isWhitePiece(piece)) {
             selectedSquare = { row, col };
             highlightSquare(row, col);
         }
     } else {
-        // Próba wykonania ruchu (weryfikacja kolizji z własną figurą)
         if (isValidMove(selectedSquare.row, selectedSquare.col, row, col)) {
             makeMove(selectedSquare.row, selectedSquare.col, row, col);
             selectedSquare = null;
@@ -86,10 +71,9 @@ function handleSquareClick(row, col) {
             if (gameActive) {
                 currentPlayer = 'b';
                 statusElement.innerText = "Myśli AI (Czarne)...";
-                setTimeout(makeAIMove, 600); // Symulacja czasu myślenia
+                setTimeout(makeAIMove, 400); 
             }
         } else {
-            // Zmiana wyboru figury
             selectedSquare = null;
             drawBoard();
             if (piece && isWhitePiece(piece)) {
@@ -105,16 +89,57 @@ function isWhitePiece(piece) {
 }
 
 function highlightSquare(row, col) {
-    drawBoard(); // Odśwież, by usunąć poprzednie podświetlenia
+    drawBoard();
     const index = row * 8 + col;
     boardElement.children[index].classList.add('highlighted');
 }
 
-function isValidMove(startRow, startCol, endRow, endCol) {
-    // Podstawowa weryfikacja - zapobieganie bicia własnych figur
-    const targetPiece = board[endRow][endCol];
-    if (targetPiece && isWhitePiece(targetPiece)) return false; 
-    return true; 
+function isPathClear(sr, sc, er, ec) {
+    const dr = Math.sign(er - sr);
+    const dc = Math.sign(ec - sc);
+    let r = sr + dr;
+    let c = sc + dc;
+    while (r !== er || c !== ec) {
+        if (board[r][c] !== '') return false;
+        r += dr;
+        c += dc;
+    }
+    return true;
+}
+
+function isValidMove(sr, sc, er, ec) {
+    const piece = board[sr][sc];
+    const target = board[er][ec];
+    
+    // Nie można zbić własnej figury
+    if (target && isWhitePiece(piece) === isWhitePiece(target)) return false;
+
+    const dr = er - sr;
+    const dc = ec - sc;
+    const absDr = Math.abs(dr);
+    const absDc = Math.abs(dc);
+    const p = piece.toLowerCase();
+
+    if (p === 'p') {
+        const dir = isWhitePiece(piece) ? -1 : 1;
+        const startRow = isWhitePiece(piece) ? 6 : 1;
+        
+        if (dc === 0 && target === '') {
+            if (dr === dir) return true;
+            if (sr === startRow && dr === 2 * dir && board[sr + dir][sc] === '') return true;
+        } else if (absDc === 1 && dr === dir && target !== '') {
+            return true;
+        }
+        return false;
+    }
+    
+    if (p === 'n') return (absDr === 2 && absDc === 1) || (absDr === 1 && absDc === 2);
+    if (p === 'b') return absDr === absDc && isPathClear(sr, sc, er, ec);
+    if (p === 'r') return (dr === 0 || dc === 0) && isPathClear(sr, sc, er, ec);
+    if (p === 'q') return (absDr === absDc || dr === 0 || dc === 0) && isPathClear(sr, sc, er, ec);
+    if (p === 'k') return absDr <= 1 && absDc <= 1;
+
+    return false;
 }
 
 function makeMove(startRow, startCol, endRow, endCol) {
@@ -124,28 +149,25 @@ function makeMove(startRow, startCol, endRow, endCol) {
     checkWinCondition();
 }
 
-// --- Sztuczna Inteligencja (AI Minimax / Random fallback) ---
 function makeAIMove() {
     if (!gameActive) return;
     
-    const depth = parseInt(document.getElementById('difficulty').value);
-    console.log(`Silnik analizuje ruch z głębokością: ${depth}`);
-    
-    // Zbieranie wszystkich możliwych ruchów dla czarnych
     let possibleMoves = [];
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            if (board[r][c] && !isWhitePiece(board[r][c])) {
-                // Logika silnika: symulacja prostych ruchów w dół planszy
-                if (r < 7 && !board[r+1][c]) {
-                    possibleMoves.push({ sr: r, sc: c, er: r+1, ec: c });
+    for (let sr = 0; sr < 8; sr++) {
+        for (let sc = 0; sc < 8; sc++) {
+            if (board[sr][sc] && !isWhitePiece(board[sr][sc])) {
+                for (let er = 0; er < 8; er++) {
+                    for (let ec = 0; ec < 8; ec++) {
+                        if (isValidMove(sr, sc, er, ec)) {
+                            possibleMoves.push({ sr, sc, er, ec });
+                        }
+                    }
                 }
             }
         }
     }
 
     if (possibleMoves.length > 0) {
-        // Wykonanie wyliczonego ruchu (tutaj fallback dla dema przeglądarkowego)
         const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
         makeMove(move.sr, move.sc, move.er, move.ec);
     }
@@ -156,7 +178,6 @@ function makeAIMove() {
     }
 }
 
-// --- Stan Gry i Ranking (Lokalna Baza Danych) ---
 function checkWinCondition() {
     let whiteKing = false;
     let blackKing = false;
@@ -182,13 +203,7 @@ function endGame(message) {
 function saveWin() {
     const nickInput = document.getElementById('player-nick').value.trim() || 'Anonim';
     let ranking = JSON.parse(localStorage.getItem('chessRanking')) || {};
-    
-    if (ranking[nickInput]) {
-        ranking[nickInput]++;
-    } else {
-        ranking[nickInput] = 1;
-    }
-    
+    ranking[nickInput] = (ranking[nickInput] || 0) + 1;
     localStorage.setItem('chessRanking', JSON.stringify(ranking));
     loadRanking();
 }
@@ -196,16 +211,12 @@ function saveWin() {
 function loadRanking() {
     let ranking = JSON.parse(localStorage.getItem('chessRanking')) || {};
     rankingList.innerHTML = '';
-    
-    const sortedRanking = Object.entries(ranking).sort((a, b) => b[1] - a[1]);
-    
-    sortedRanking.forEach(([nick, wins]) => {
+    Object.entries(ranking).sort((a, b) => b[1] - a[1]).forEach(([nick, wins]) => {
         const li = document.createElement('li');
         li.innerText = `${nick}: ${wins} wygranych`;
         rankingList.appendChild(li);
     });
 }
 
-// --- Uruchomienie ---
 startBtn.addEventListener('click', initGame);
 initGame();

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Chess AI</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>♟️ Web Chess Engine</h1>
+            <div class="controls">
+                <input type="text" id="player-nick" placeholder="Wpisz swój nick...">
+                <select id="difficulty">
+                    <option value="1">Poziom: Łatwy</option>
+                    <option value="3" selected>Poziom: Średni</option>
+                    <option value="5">Poziom: Trudny (Minimax)</option>
+                </select>
+                <button id="start-btn">Nowa Gra</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="board-container">
+                <div id="chessboard"></div>
+            </div>
+            
+            <aside class="sidebar">
+                <div class="status-box">
+                    <h3>Status Gry</h3>
+                    <p id="game-status">Oczekiwanie na start...</p>
+                </div>
+                
+                <div class="ranking-box">
+                    <h3>🏆 Ranking Zwycięstw</h3>
+                    <ul id="ranking-list">
+                        <!-- Wyniki będą generowane przez JS -->
+                    </ul>
+                </div>
+            </aside>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

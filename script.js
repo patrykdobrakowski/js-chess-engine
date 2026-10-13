@@ -3,11 +3,6 @@ const statusElement = document.getElementById('game-status');
 const startBtn = document.getElementById('start-btn');
 const rankingList = document.getElementById('ranking-list');
 
-let board = [];
-let selectedSquare = null;
-let currentPlayer = 'w';
-let gameActive = false;
-
 const pieces = {
     'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚', 'p': '♟',
     'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔', 'P': '♙'
@@ -24,6 +19,11 @@ const initialBoard = [
     ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
 ];
 
+let board = [];
+let selectedSquare = null;
+let currentPlayer = 'w';
+let gameActive = false;
+
 function initGame() {
     board = JSON.parse(JSON.stringify(initialBoard));
     currentPlayer = 'w';
@@ -39,13 +39,18 @@ function drawBoard() {
     for (let row = 0; row < 8; row++) {
         for (let col = 0; col < 8; col++) {
             const square = document.createElement('div');
-            square.classList.add('square');
-            square.classList.add((row + col) % 2 === 0 ? 'light' : 'dark');
-            square.dataset.row = row;
-            square.dataset.col = col;
+            // Czyste nadawanie klas dla jasnych/ciemnych pól
+            square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+            
+            // Bezpieczne podświetlanie bez rozbijania siatki
+            if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
+                square.classList.add('highlighted');
+            }
 
             const piece = board[row][col];
-            if (piece) square.innerText = pieces[piece];
+            if (piece) {
+                square.innerText = pieces[piece];
+            }
 
             square.addEventListener('click', () => handleSquareClick(row, col));
             boardElement.appendChild(square);
@@ -58,66 +63,49 @@ function handleSquareClick(row, col) {
 
     const piece = board[row][col];
 
-    if (selectedSquare === null) {
+    if (!selectedSquare) {
         if (piece && isWhitePiece(piece)) {
             selectedSquare = { row, col };
-            highlightSquare(row, col);
+            drawBoard(); 
         }
     } else {
-        if (isValidMove(selectedSquare.row, selectedSquare.col, row, col)) {
-            makeMove(selectedSquare.row, selectedSquare.col, row, col);
-            selectedSquare = null;
-            
-            if (gameActive) {
-                currentPlayer = 'b';
-                statusElement.innerText = "Myśli AI (Czarne)...";
-                setTimeout(makeAIMove, 400); 
-            }
-        } else {
-            selectedSquare = null;
+        if (piece && isWhitePiece(piece)) {
+            selectedSquare = { row, col };
             drawBoard();
-            if (piece && isWhitePiece(piece)) {
-                selectedSquare = { row, col };
-                highlightSquare(row, col);
+        } else {
+            if (isValidMove(selectedSquare.row, selectedSquare.col, row, col)) {
+                makeMove(selectedSquare.row, selectedSquare.col, row, col);
+                selectedSquare = null;
+                
+                if (gameActive) {
+                    currentPlayer = 'b';
+                    statusElement.innerText = "Myśli AI (Czarne)...";
+                    setTimeout(makeAIMove, 500);
+                }
+            } else {
+                selectedSquare = null;
+                drawBoard();
             }
         }
     }
 }
 
-function isWhitePiece(piece) {
-    return piece === piece.toUpperCase() && piece !== '';
+function isWhitePiece(p) {
+    return p !== '' && p === p.toUpperCase();
 }
 
-function highlightSquare(row, col) {
-    drawBoard();
-    const index = row * 8 + col;
-    boardElement.children[index].classList.add('highlighted');
-}
-
-function isPathClear(sr, sc, er, ec) {
-    const dr = Math.sign(er - sr);
-    const dc = Math.sign(ec - sc);
-    let r = sr + dr;
-    let c = sc + dc;
-    while (r !== er || c !== ec) {
-        if (board[r][c] !== '') return false;
-        r += dr;
-        c += dc;
-    }
-    return true;
+function isBlackPiece(p) {
+    return p !== '' && p === p.toLowerCase();
 }
 
 function isValidMove(sr, sc, er, ec) {
     const piece = board[sr][sc];
     const target = board[er][ec];
     
-    // Nie można zbić własnej figury
-    if (target && isWhitePiece(piece) === isWhitePiece(target)) return false;
+    if (target !== '' && isWhitePiece(piece) === isWhitePiece(target)) return false;
 
     const dr = er - sr;
     const dc = ec - sc;
-    const absDr = Math.abs(dr);
-    const absDc = Math.abs(dc);
     const p = piece.toLowerCase();
 
     if (p === 'p') {
@@ -127,24 +115,56 @@ function isValidMove(sr, sc, er, ec) {
         if (dc === 0 && target === '') {
             if (dr === dir) return true;
             if (sr === startRow && dr === 2 * dir && board[sr + dir][sc] === '') return true;
-        } else if (absDc === 1 && dr === dir && target !== '') {
+        }
+        else if (Math.abs(dc) === 1 && dr === dir && target !== '') {
             return true;
         }
         return false;
     }
     
-    if (p === 'n') return (absDr === 2 && absDc === 1) || (absDr === 1 && absDc === 2);
-    if (p === 'b') return absDr === absDc && isPathClear(sr, sc, er, ec);
-    if (p === 'r') return (dr === 0 || dc === 0) && isPathClear(sr, sc, er, ec);
-    if (p === 'q') return (absDr === absDc || dr === 0 || dc === 0) && isPathClear(sr, sc, er, ec);
-    if (p === 'k') return absDr <= 1 && absDc <= 1;
+    if (p === 'n') {
+        return (Math.abs(dr) === 2 && Math.abs(dc) === 1) || (Math.abs(dr) === 1 && Math.abs(dc) === 2);
+    }
+    
+    if (p === 'b') {
+        if (Math.abs(dr) !== Math.abs(dc)) return false;
+        return isPathClear(sr, sc, er, ec);
+    }
+    
+    if (p === 'r') {
+        if (dr !== 0 && dc !== 0) return false;
+        return isPathClear(sr, sc, er, ec);
+    }
+    
+    if (p === 'q') {
+        if (Math.abs(dr) !== Math.abs(dc) && dr !== 0 && dc !== 0) return false;
+        return isPathClear(sr, sc, er, ec);
+    }
+    
+    if (p === 'k') {
+        return Math.abs(dr) <= 1 && Math.abs(dc) <= 1;
+    }
 
     return false;
 }
 
-function makeMove(startRow, startCol, endRow, endCol) {
-    board[endRow][endCol] = board[startRow][startCol];
-    board[startRow][startCol] = '';
+function isPathClear(sr, sc, er, ec) {
+    const rowStep = sr === er ? 0 : (er > sr ? 1 : -1);
+    const colStep = sc === ec ? 0 : (ec > sc ? 1 : -1);
+    let r = sr + rowStep;
+    let c = sc + colStep;
+    
+    while (r !== er || c !== ec) {
+        if (board[r][c] !== '') return false;
+        r += rowStep;
+        c += colStep;
+    }
+    return true;
+}
+
+function makeMove(sr, sc, er, ec) {
+    board[er][ec] = board[sr][sc];
+    board[sr][sc] = '';
     drawBoard();
     checkWinCondition();
 }
@@ -155,7 +175,7 @@ function makeAIMove() {
     let possibleMoves = [];
     for (let sr = 0; sr < 8; sr++) {
         for (let sc = 0; sc < 8; sc++) {
-            if (board[sr][sc] && !isWhitePiece(board[sr][sc])) {
+            if (board[sr][sc] && isBlackPiece(board[sr][sc])) {
                 for (let er = 0; er < 8; er++) {
                     for (let ec = 0; ec < 8; ec++) {
                         if (isValidMove(sr, sc, er, ec)) {
@@ -168,7 +188,17 @@ function makeAIMove() {
     }
 
     if (possibleMoves.length > 0) {
-        const move = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+        let bestMoves = [];
+        for (let move of possibleMoves) {
+            if (board[move.er][move.ec] !== '') {
+                bestMoves.push(move);
+            }
+        }
+        
+        let move = bestMoves.length > 0 
+            ? bestMoves[Math.floor(Math.random() * bestMoves.length)] 
+            : possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+            
         makeMove(move.sr, move.sc, move.er, move.ec);
     }
 

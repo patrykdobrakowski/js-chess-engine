@@ -1,0 +1,110 @@
+:root {
+    --bg-color: #121212;
+    --panel-bg: #1e1e1e;
+    --text-color: #e0e0e0;
+    --accent-color: #bb86fc;
+    --board-light: #ebecd0;
+    --board-dark: #779556;
+    --highlight: rgba(187, 134, 252, 0.4);
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    width: 90%;
+    max-width: 1000px;
+    margin-top: 2rem;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background-color: var(--panel-bg);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+h1 { margin: 0; font-size: 1.5rem; color: var(--accent-color); }
+
+.controls input, .controls select, .controls button {
+    padding: 0.5rem;
+    margin-left: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #333;
+    background: #2a2a2a;
+    color: white;
+}
+
+.controls button {
+    background-color: var(--accent-color);
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.controls button:hover { opacity: 0.8; }
+
+main {
+    display: flex;
+    gap: 2rem;
+}
+
+.board-container {
+    flex: 2;
+}
+
+#chessboard {
+    width: 480px;
+    height: 480px;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    border: 2px solid #333;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.square {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.5rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.light { background-color: var(--board-light); color: #000; }
+.dark { background-color: var(--board-dark); color: #000; }
+.highlighted { box-shadow: inset 0 0 0 4px var(--accent-color); }
+
+.sidebar {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.status-box, .ranking-box {
+    background-color: var(--panel-bg);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+
+.status-box h3, .ranking-box h3 { margin-top: 0; color: var(--accent-color); border-bottom: 1px solid #333; padding-bottom: 0.5rem; }
+#ranking-list { list-style: none; padding: 0; margin: 0; }
+#ranking-list li { padding: 0.5rem 0; border-bottom: 1px dashed #333; }
